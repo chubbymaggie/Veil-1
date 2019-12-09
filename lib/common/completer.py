@@ -1,10 +1,8 @@
 """
-
 Contains any classes used for tab completion.
 
-
-Reference - http://stackoverflow.com/questions/5637124/tab-completion-in-pythons-raw-input
-
+Reference:
+    http://stackoverflow.com/questions/5637124/tab-completion-in-pythons-raw-input
 """
 
 # Import Modules
@@ -12,6 +10,15 @@ import readline
 import subprocess
 import re
 import os
+import sys
+
+# Try to find and import the settings.py config file
+try:
+    sys.path.append("/etc/veil/")
+    import settings
+except ImportError:
+    print( "\n [!] ERROR #1-7: Can't import /etc/veil/settings.py.   Run: %s\n" % ( os.path.abspath( "./config/update-config.py" ) ) )
+    sys.exit()
 
 
 class none(object):
@@ -186,9 +193,11 @@ class PayloadCompleter(object):
 
             options = [k for k in sorted(self.payload.required_options.keys())]
 
-            if args[0] != "":
+            if args[0] != '':
                 if args[0].strip() == "LHOST":
                     # autocomplete the IP for LHOST
+                    if settings.DISTRO == 'Debian':
+                        ip_output = subprocess.getoutput("ip a").split("\n")[8][9:].split('/')[0]
                     ip_output = subprocess.getoutput("/sbin/ifconfig eth0").split("\n")[1].split()[1]
                     if 'addr' in ip_output:
                         ip_output = ip_output[5:]
@@ -340,9 +349,12 @@ class IPCompleter(object):
         line = readline.get_line_buffer().split()
 
         if not line:
-            ip = [subprocess.getoutput("/sbin/ifconfig eth0").split("\n")[1].split()[1]] + [None]
-            if 'addr' in ip[state]:
-                ip[state] = ip[state][5:]
+            if settings.DISTRO == 'Debian':
+                ip[state] = subprocess.getoutput("ip a").split("\n")[8][9:].split('/')[0]
+            else:
+                ip = [subprocess.getoutput("/sbin/ifconfig eth0").split("\n")[1].split()[1]] + [None]
+                if 'addr' in ip[state]:
+                    ip[state] = ip[state][5:]
             return ip[state]
         else:
             return text[state]
@@ -474,12 +486,15 @@ class OrdnanceCompleter(object):
 
             options = [k for k in sorted(self.payload.required_options.keys())]
 
-            if args[0] != "":
+            if args[0] != '':
                 if args[0].strip() == "LHOST":
+                    if settings.DISTRO == 'Debian':
+                        ip_output = subprocess.getoutput("ip a").split("\n")[8][9:].split('/')[0]
                     # autocomplete the IP for LHOST
-                    ip_output = subprocess.getoutput("/sbin/ifconfig eth0").split("\n")[1].split()[1]
-                    if 'addr' in ip_output:
-                        ip_output = ip_output[5:]
+                    else:
+                        ip_output = subprocess.getoutput("/sbin/ifconfig eth0").split("\n")[1].split()[1]
+                        if 'addr' in ip_output:
+                            ip_output = ip_output[5:]
                     res = [ip_output] + [None]
                 elif args[0].strip() == "LPORT":
                     # autocomplete the common MSF port of 4444 for LPORT
